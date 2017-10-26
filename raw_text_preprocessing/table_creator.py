@@ -1,27 +1,26 @@
 import pandas as pd
-import numpy as np
 from bs4 import BeautifulSoup
 import re
 
 
 
+# function retrieving text from given tag
 def text_get(a):
     return a.text
 
-
+# function dividing name of analyst or executive for person's name and company's name
 def name_company_split(name):
-    r1 = name.split('–')
-    r2 = name.split('-')
-    result_list = 0
-    if len(r1)==2:
-        result_list = r1
-    elif len(r2)==2:
-        result_list = r2
-    else:
-        print('Error in splitting analytics name')
+    utf_name = name.encode('utf-8')
+    result_list = [name, 'No_company_found']
+    if b'\xe2\x80\x93' in utf_name:
+        result_list = utf_name.split(b'\xe2\x80\x93')
+        result_list = [result_list[0].decode(), result_list[1].decode()]
+    elif '-' in name:
+        result_list = name.split('-')
+    result_list = [result_list[0], ' - '.join(result_list[1:])]
     return result_list
 
-
+# function gets date from given str
 def date_getter(s):
     res = s.replace('Call End', '')
     res = res.replace('Call Start', '')
@@ -41,10 +40,29 @@ def date_getter(s):
         ret = res
     return ret[0].split('+')[0]
 
+def comp_getter(s):
+    res = s.replace('Call End', '')
+    res = res.replace('Call Start', '')
+    pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
+    if '+' in pat:
+        parts = pat.split('+')
+        for p in parts:
+            search_c = re.search(r'\(.+[A-Z]+\)', p)
+            if search_c is not None:
+                search_c = search_c.group()
+            else:
+                search_c = ""
+            if len(search_c)!=0:
+                pat = p
+    return pat
 
+
+# mail function - get table from given text (text as hole page with QA session)
 def one_text_reader(file_path):
 
     text_file = open(file_path, "r")
+    result = []
+
     lines = text_file.read()
     text_file.close()
     text = BeautifulSoup(lines, 'html.parser')
@@ -66,15 +84,15 @@ def one_text_reader(file_path):
     header = '+'.join([(lambda x: x.text)(t) for t in text_data[:e_flag]])
 
     date = date_getter(header)
-    # company_name = comp_getter(header)
+    company_name = comp_getter(header)
 
     executives_name = []
     executives_pos = []
     for i in range(e_flag+1, a_flag):
         ex_text = text_data[i].text
         if len(ex_text)>0:
-            executives_name.append(ex_text.split(' - ')[0])
-            executives_pos.append(ex_text.split(' - ')[1])
+            executives_name.append(name_company_split(ex_text)[0]) #ex_text.split(' - ')[0])
+            executives_pos.append(name_company_split(ex_text)[1])
     exec_dict = dict(zip([e.replace(' ', '') for e in executives_name], executives_pos))
 
     analysts = []
@@ -96,7 +114,7 @@ def one_text_reader(file_path):
                 p
             )
 
-    result = []
+    analytics_order = 0
     for f in range(len(oper_flags) - 1):
         p_data = text_data[oper_flags[f]:oper_flags[f + 1]]
         q_blocks = []
@@ -104,7 +122,10 @@ def one_text_reader(file_path):
             if p_data[p].text in analysts:
                 q_blocks.append(p)
 
+        analytics_order+=1
+
         one_q_sprint = []
+        sprint_order = 0
         for i in range(len(q_blocks) - 1):
             one_q_sprint_data = p_data[q_blocks[i]:q_blocks[i + 1]]
 
@@ -120,6 +141,9 @@ def one_text_reader(file_path):
                     answers_ids.append(j)
             answers_ids.append(len(one_q_sprint_data))
 
+            sprint_order+=1
+
+            answer_oredr = 0
             for a_id in range(len(answers_ids) - 1):
                 a = one_q_sprint_data[answers_ids[a_id] + 1:answers_ids[a_id + 1]]
 
@@ -128,6 +152,8 @@ def one_text_reader(file_path):
                 exec_name = one_q_sprint_data[answers_ids[a_id]].text
 
                 a = list(map(text_get, a))
+
+                answer_oredr+=1
                 one_q_sprint.append(
                     [
                         company_name,                               # company
@@ -137,10 +163,14 @@ def one_text_reader(file_path):
                         ' '.join(q),                                # question
                         exec_name,                                  # exec name
                         exec_dict[exec_name.replace(' ', '')],      # exec company
-                        ' '.join(a)                                 # answer
+                        ' '.join(a),                                # answer
+                        analytics_order,                            # analytics_order
+                        sprint_order,                               # analytics_q_order
+                        answer_oredr                                # exec_a_order
                     ]
                 )
         result += one_q_sprint
+
     return pd.DataFrame(result, columns=['Company_name',
                                          'Date',
                                          'Analyst',
@@ -148,102 +178,12 @@ def one_text_reader(file_path):
                                          'Question',
                                          'Executive_Name',
                                          'Executive_position',
-                                         'Answer'])
+                                         'Answer',
+                                         'Analytics_order',
+                                         'Analytics_question_order',
+                                         'Exec_answer_order'])
 
 
 
 # r = one_text_reader("raw_text_preprocessing/1895_num_0.txt")
-
-
-with open('err.txt', 'r') as file:
-    t = file.read()
-
-err_p = t.split('\n')
-
-r = []
-for p in err_p:
-
-    text_file = open('data/parsing/' + p, "r")
-    lines = text_file.read()
-    text_file.close()
-    text = BeautifulSoup(lines, 'html.parser')
-
-    text_data = text('p')
-
-    e_flag = 0
-    a_flag = 0
-    stop_flag = 0
-    for p in range(len(text_data)):
-        if 'Executives' in text_data[p].text:
-            e_flag = p
-        if 'Analysts' in text_data[p].text:
-            a_flag = p
-        if 'Operator' in text_data[p].text:
-            stop_flag = p
-            break
-
-    r.append(
-        [(lambda x: x.text)(t) for t in text_data[:e_flag]]
-    )
-
-r_con = ['+'.join(x) for x in r]
-
-
-
-def comp_getter(s):
-    res = s.replace('Call End', '')
-    res = res.replace('Call Start', '')
-    if len(res)!=0:
-        print(res)
-        pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
-    else:
-        pat = res
-    return pat
-
-
-re.findall(r'.+\([A-Z]+.+\)', 'Owens-Illinois (NYSE:OI)+Q4 2012 Earnings Call+January 31, 2013  8:00 am ET')[0]
-
-
-a = []
-for i in range(len(r_con)):
-    res = r_con[i]
-    comp_getter(res)
-
-
-
-r'.+\([A-Z]+:?[A-Z]+.?[A-Z]+\)'
-
-
-
-
-
-# dates_list = []
-# for res in r_con:
-#     first = r'[A-Z][a-z]+\,?\ +\d+\,? \d+\,?\;?\ +\d+?.?\d+.+'
-#     second = r'[A-Z][a-z]+\,?\ +\d+\,?\ +\d+\ +-\ +\d+?.?\d+.+'
-#     third = r'[A-Z][a-z]+\,?\ +\d+\,?\ +\d+\ +at\ +\d+?.?\d+.+'
-#     forth = r'[A-Z][a-z]+\,?\ +\d+\,? \d+'
-#     if len(re.findall(first, res))!=0:
-#         dates_list.append(
-#             re.findall(first, res)
-#         )
-#     elif len(re.findall(second, res))!=0:
-#         dates_list.append(
-#             re.findall(second, res)
-#         )
-#     elif len(re.findall(third, res))!=0:
-#         dates_list.append(
-#             re.findall(third, res)
-#         )
-#     elif len(re.findall(forth, res)) != 0:
-#         dates_list.append(
-#             re.findall(forth, res)
-#         )
-#     else:
-#         dates_list.append(res)
-
-
-
-
-
 
