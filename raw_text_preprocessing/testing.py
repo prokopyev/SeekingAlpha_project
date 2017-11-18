@@ -79,6 +79,8 @@ for p in range(QA_begin, len(text_data)):
             p
         )
 
+#############################################
+
 analytics_order = 0
 for f in range(len(oper_flags) - 1):
 

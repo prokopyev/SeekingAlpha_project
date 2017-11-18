@@ -69,13 +69,22 @@ def one_text_reader(file_path):
 
     text_data = text('p')
 
+    for p in range(len(text_data)):
+        if 'Unidentified Company Representative' in text_data[p].text:
+            print('Unidentified Company Representative included')
+            break
+
     e_flag = 0
     a_flag = 0
     stop_flag = 0
     for p in range(len(text_data)):
         if 'Executives' in text_data[p].text:
             e_flag = p
+        elif 'Executive' in text_data[p].text:
+            e_flag = p
         if 'Analysts' in text_data[p].text:
+            a_flag = p
+        elif 'Analyst' in text_data[p].text:
             a_flag = p
         if 'Operator' in text_data[p].text:
             stop_flag = p
@@ -150,6 +159,11 @@ def one_text_reader(file_path):
                 anal_name = name_company_split(one_q_sprint_data[0].text)[0]
                 anal_comp = name_company_split(one_q_sprint_data[0].text)[1]
                 exec_name = one_q_sprint_data[answers_ids[a_id]].text
+                exec_list = list(
+                    map(lambda x: x[0] + '-' + x[1],
+                        list(zip(executives_name, executives_pos))
+                        )
+                )
 
                 a = list(map(text_get, a))
 
@@ -166,7 +180,10 @@ def one_text_reader(file_path):
                         ' '.join(a),                                # answer
                         analytics_order,                            # analytics_order
                         sprint_order,                               # analytics_q_order
-                        answer_oredr                                # exec_a_order
+                        answer_oredr,                               # exec_a_order
+                        analysts,                                   # list of analysts
+                        exec_list,                                  # list of executives
+                        file_path
                     ]
                 )
         result += one_q_sprint
@@ -181,7 +198,10 @@ def one_text_reader(file_path):
                                          'Answer',
                                          'Analytics_order',
                                          'Analytics_question_order',
-                                         'Exec_answer_order'])
+                                         'Exec_answer_order',
+                                         'Analysts_list',
+                                         'Executives_list',
+                                         'File_path'])
 
 
 
