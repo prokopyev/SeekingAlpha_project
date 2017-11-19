@@ -40,25 +40,65 @@ def date_getter(s):
         ret = res
     return ret[0].split('+')[0]
 
+# def comp_getter(s):
+#     res = s.replace('Call End', '')
+#     res = res.replace('Call Start', '')
+#     pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
+#     if '+' in pat:
+#         parts = pat.split('+')
+#         if :
+#             pass
+#         else:
+#             for p in parts:
+#                 search_c = re.search(r'\(.+[A-Z]+\)', p)
+#                 if search_c is not None:
+#                     search_c = search_c.group()
+#                 else:
+#                     search_c = ""
+#                 if len(search_c)!=0:
+#                     pat = p
+#     return pat
+
+
 def comp_getter(s):
     res = s.replace('Call End', '')
     res = res.replace('Call Start', '')
-    pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
-    if '+' in pat:
-        parts = pat.split('+')
-        for p in parts:
-            search_c = re.search(r'\(.+[A-Z]+\)', p)
-            if search_c is not None:
-                search_c = search_c.group()
+    try:
+        pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
+        if '+' in pat:
+            parts = pat.split('+')
+            if 'Inc' in parts[0]:
+                pat = re.findall(r'.+Inc.+', parts[0])[0]
             else:
-                search_c = ""
-            if len(search_c)!=0:
-                pat = p
+                for p in parts:
+                    search_c = re.search(r'\(.+[A-Z]+\)', p)
+                    if search_c is not None:
+                        search_c = search_c.group()
+                    else:
+                        search_c = ""
+                    if len(search_c)!=0:
+                        pat = p
+    except:
+        if '+' in res:
+            parts = res.split('+')
+            print(parts)
+            if 'Inc' in parts[0]:
+                pat = re.findall(r'.+Inc.+', parts[0])[0]
+            else:
+                for p in parts:
+                    search_c = re.search(r'\(.+[A-Z]+\)', p)
+                    if search_c is not None:
+                        search_c = search_c.group()
+                    else:
+                        search_c = ""
+                    if len(search_c)!=0:
+                        pat = p
     return pat
 
 
 # mail function - get table from given text (text as hole page with QA session)
 def one_text_reader(file_path):
+    folder = ''
 
     text_file = open(file_path, "r")
     result = []
@@ -71,24 +111,30 @@ def one_text_reader(file_path):
 
     for p in range(len(text_data)):
         if 'Unidentified Company Representative' in text_data[p].text:
-            print('Unidentified Company Representative included')
+            with open(folder + 'err_unidentified.txt', 'a') as file:
+                file.write(file_path + '\n')
+            break
+        if 'Unidentified Corporate Participant' in text_data[p].text:
+            with open(folder + 'err_unidentified.txt', 'a') as file:
+                file.write(file_path + '\n')
             break
 
     e_flag = 0
     a_flag = 0
     stop_flag = 0
     for p in range(len(text_data)):
-        if 'Executives' in text_data[p].text:
-            e_flag = p
-        elif 'Executive' in text_data[p].text:
-            e_flag = p
-        if 'Analysts' in text_data[p].text:
-            a_flag = p
-        elif 'Analyst' in text_data[p].text:
-            a_flag = p
-        if 'Operator' in text_data[p].text:
-            stop_flag = p
-            break
+        if len(text_data[p].contents) != 0:
+            if 'Executives' in text_data[p].text:
+                e_flag = p
+            elif '<strong>Executive' in str(text_data[p].contents[0]):
+                e_flag = p
+            if 'Analysts' in text_data[p].text:
+                a_flag = p
+            elif '<strong>Analyst' in str(text_data[p].contents[0]):
+                a_flag = p
+            if '<strong>Operator' in str(text_data[p].contents[0]):
+                stop_flag = p
+                break
 
     header = '+'.join([(lambda x: x.text)(t) for t in text_data[:e_flag]])
 
@@ -114,6 +160,9 @@ def one_text_reader(file_path):
     for p in range(len(text_data)):
         if text_data[p].get('id')=="question-answer-session":
             QA_begin = p
+            if 'question-and-answer session not available' in text_data[p].text:
+                with open(folder + 'err_qa_not_available.txt', 'a') as file:
+                    file.write(file_path + '\n')
             break
 
     oper_flags = []
@@ -128,7 +177,10 @@ def one_text_reader(file_path):
         p_data = text_data[oper_flags[f]:oper_flags[f + 1]]
         q_blocks = []
         for p in range(len(p_data)):
-            if p_data[p].text in analysts:
+            # if p_data[p].text in analysts:
+            if p_data[p].text.replace(' ', '') in list(
+                        map(lambda x: x.replace(' ', ''), analysts)
+            ):
                 q_blocks.append(p)
 
         analytics_order+=1
@@ -181,8 +233,8 @@ def one_text_reader(file_path):
                         analytics_order,                            # analytics_order
                         sprint_order,                               # analytics_q_order
                         answer_oredr,                               # exec_a_order
-                        analysts,                                   # list of analysts
-                        exec_list,                                  # list of executives
+                        str(analysts)[1: -1],                                   # list of analysts
+                        str(exec_list)[1:-1],                                  # list of executives
                         file_path
                     ]
                 )
