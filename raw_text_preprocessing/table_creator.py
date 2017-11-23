@@ -68,7 +68,7 @@ def comp_getter(s):
         if '+' in pat:
             parts = pat.split('+')
             if 'Inc' in parts[0]:
-                pat = re.findall(r'.+Inc.+', parts[0])[0]
+                pat = re.findall(r'.+Inc{?}*', parts[0])[0]
             else:
                 for p in parts:
                     search_c = re.search(r'\(.+[A-Z]+\)', p)
@@ -81,9 +81,8 @@ def comp_getter(s):
     except:
         if '+' in res:
             parts = res.split('+')
-            print(parts)
             if 'Inc' in parts[0]:
-                pat = re.findall(r'.+Inc.+', parts[0])[0]
+                pat = re.findall(r'.+Inc{?}*', parts[0])[0]
             else:
                 for p in parts:
                     search_c = re.search(r'\(.+[A-Z]+\)', p)
@@ -111,11 +110,19 @@ def one_text_reader(file_path):
 
     for p in range(len(text_data)):
         if 'Unidentified Company Representative' in text_data[p].text:
-            with open(folder + 'err_unidentified.txt', 'a') as file:
+            with open(folder + 'err_unidentified_cr.txt', 'a') as file:
                 file.write(file_path + '\n')
             break
         if 'Unidentified Corporate Participant' in text_data[p].text:
-            with open(folder + 'err_unidentified.txt', 'a') as file:
+            with open(folder + 'err_unidentified_cp.txt', 'a') as file:
+                file.write(file_path + '\n')
+            break
+        if 'question-and-answer session not available' in text_data[p].text:
+            with open(folder + 'err_qa_not_available.txt', 'a') as file:
+                file.write(file_path + '\n')
+            break
+        if 'No Q&A session for this event' in text_data[p].text:
+            with open(folder + 'err_qa_not_available.txt', 'a') as file:
                 file.write(file_path + '\n')
             break
 

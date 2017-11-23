@@ -6,11 +6,84 @@ from raw_text_preprocessing.table_creator import *
 with open('err.txt', 'r') as file:
     err_files = file.readlines()
 
-file_path = err_files[14][:-1]
+file_path = err_files[5272][:-1]
+
+zero_files = []
+for i in range(len(err_files)):
+    try:
+        file_path = err_files[i][:-1]
+        text_file = open(file_path, "r")
+        result = []
+
+        lines = text_file.read()
+        text_file.close()
+        text = BeautifulSoup(lines, 'html.parser')
+
+        text_data = text('p')
+
+        for p in range(len(text_data)):
+            if 'Unidentified Company Representative' in text_data[p].text:
+                print('Unidentified Company Representative included')
+                break
+            if 'Unidentified Corporate Participant' in text_data[p].text:
+                print('Unidentified Company Representative included')
+                break
+
+        e_flag = 0
+        a_flag = 0
+        stop_flag = 0
+        for p in range(len(text_data)):
+            if len(text_data[p].contents)!=0:
+                if 'Executives' in text_data[p].text:
+                    e_flag = p
+                elif '<strong>Executive' in str(text_data[p].contents[0]):
+                    e_flag = p
+                if 'Analysts' in text_data[p].text:
+                    a_flag = p
+                elif '<strong>Analyst' in str(text_data[p].contents[0]):
+                    a_flag = p
+                if '<strong>Operator' in str(text_data[p].contents[0]):
+                    stop_flag = p
+                    break
+        if (e_flag!=0) & (a_flag!=0) & (stop_flag!=0):
+            print(i, e_flag, a_flag, stop_flag, file_path)
+        else:
+            zero_files.append(i)
+    except:
+        pass
 
 
-# file_path = 'data/inner/3000_num_10.txt'
 
+
+file_path = err_files[zero_files[2]][:-1]
+
+text_file = open(file_path, "r")
+
+lines = text_file.read()
+text_file.close()
+text = BeautifulSoup(lines, 'html.parser')
+
+text_data = text('p')
+
+text_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+file_path = 'data/outer/1-526/281_num_28.txt'
 
 ### func start ###
 
@@ -175,41 +248,4 @@ pd.DataFrame(result, columns=['Company_name',
 
 
 
-
-def comp_getter(s):
-    res = s.replace('Call End', '')
-    res = res.replace('Call Start', '')
-    try:
-        pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
-        if '+' in pat:
-            parts = pat.split('+')
-            if 'Inc' in parts[0]:
-                pat = re.findall(r'.+Inc.+', parts[0])[0]
-            else:
-                for p in parts:
-                    search_c = re.search(r'\(.+[A-Z]+\)', p)
-                    if search_c is not None:
-                        search_c = search_c.group()
-                    else:
-                        search_c = ""
-                    if len(search_c)!=0:
-                        pat = p
-    except:
-        if '+' in res:
-            parts = res.split('+')
-            print(parts)
-            if 'Inc' in parts[0]:
-                pat = re.findall(r'.+Inc.+', parts[0])[0]
-            else:
-                for p in parts:
-                    search_c = re.search(r'\(.+[A-Z]+\)', p)
-                    if search_c is not None:
-                        search_c = search_c.group()
-                    else:
-                        search_c = ""
-                    if len(search_c)!=0:
-                        pat = p
-    return pat
-
-comp_getter('Amicus Therapeutics, Inc.+Amicus and GSK Expanded Fabry Collaboration Call+July 17, 2012 05:00 pm ET')
 
