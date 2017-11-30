@@ -98,25 +98,15 @@ def comp_getter(s):
 # mail function - get table from given text (text as hole page with QA session)
 def one_text_reader(file_path):
     folder = ''
-
-    text_file = open(file_path, "r")
     result = []
 
+    text_file = open(file_path, "r")
     lines = text_file.read()
     text_file.close()
     text = BeautifulSoup(lines, 'html.parser')
-
     text_data = text('p')
 
     for p in range(len(text_data)):
-        if 'Unidentified Company Representative' in text_data[p].text:
-            with open(folder + 'err_unidentified_cr.txt', 'a') as file:
-                file.write(file_path + '\n')
-            break
-        if 'Unidentified Corporate Participant' in text_data[p].text:
-            with open(folder + 'err_unidentified_cp.txt', 'a') as file:
-                file.write(file_path + '\n')
-            break
         if 'question-and-answer session not available' in text_data[p].text:
             with open(folder + 'err_qa_not_available.txt', 'a') as file:
                 file.write(file_path + '\n')

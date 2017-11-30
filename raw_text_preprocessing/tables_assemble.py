@@ -26,10 +26,5 @@ with open(folder + 'err.txt', 'r') as file:
     err_files = file.readlines()
 
 
-from shutil import copyfile
 
-
-for f in err_files[:-1]:
-    f = f.replace('\n', '')
-    copyfile('data/parsing/' + f, 'data/' + f)
 

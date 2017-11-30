@@ -1,89 +1,100 @@
 import pandas as pd
 from bs4 import BeautifulSoup
 import re
+import os
 from raw_text_preprocessing.table_creator import *
 
-with open('err.txt', 'r') as file:
-    err_files = file.readlines()
+err_files = os.listdir('data/err_files_norm')
 
-file_path = err_files[5272][:-1]
 
-zero_files = []
-for i in range(len(err_files)):
+# function gets date from given str
+def date_getter(s):
+    res = s.replace('Call End', '')
+    res = res.replace('Call Start', '')
+    first = r'[A-Z][a-z]+\,?\ +\d+\,? \d+\,?\;?\ +\d+?.?\d+.+'
+    second = r'[A-Z][a-z]+\,?\ +\d+\,?\ +\d+\ +-\ +\d+?.?\d+.+'
+    third = r'[A-Z][a-z]+\,?\ +\d+\,?\ +\d+\ +at\ +\d+?.?\d+.+'
+    forth = r'[A-Z][a-z]+\,?\ +\d+\,? \d+'
+    if len(re.findall(first, res))!=0:
+        ret = re.findall(first, res)
+    elif len(re.findall(second, res))!=0:
+        ret = re.findall(second, res)
+    elif len(re.findall(third, res))!=0:
+        ret = re.findall(third, res)
+    elif len(re.findall(forth, res)) != 0:
+        ret = re.findall(forth, res)
+    else:
+        ret = res
+    return ret[0].split('+')[0]
+
+
+def head_date(bstext):
+    time_tags = bstext('time')
+    head_time_list = [time_tags[0].get('datetime'),
+                      time_tags[1].get('content'),
+                      time_tags[1].text]
+    return head_time_list
+
+
+def comp_getter(s):
+    res = s.replace('Call End', '')
+    res = res.replace('Call Start', '')
     try:
-        file_path = err_files[i][:-1]
-        text_file = open(file_path, "r")
-        result = []
-
-        lines = text_file.read()
-        text_file.close()
-        text = BeautifulSoup(lines, 'html.parser')
-
-        text_data = text('p')
-
-        for p in range(len(text_data)):
-            if 'Unidentified Company Representative' in text_data[p].text:
-                print('Unidentified Company Representative included')
-                break
-            if 'Unidentified Corporate Participant' in text_data[p].text:
-                print('Unidentified Company Representative included')
-                break
-
-        e_flag = 0
-        a_flag = 0
-        stop_flag = 0
-        for p in range(len(text_data)):
-            if len(text_data[p].contents)!=0:
-                if 'Executives' in text_data[p].text:
-                    e_flag = p
-                elif '<strong>Executive' in str(text_data[p].contents[0]):
-                    e_flag = p
-                if 'Analysts' in text_data[p].text:
-                    a_flag = p
-                elif '<strong>Analyst' in str(text_data[p].contents[0]):
-                    a_flag = p
-                if '<strong>Operator' in str(text_data[p].contents[0]):
-                    stop_flag = p
-                    break
-        if (e_flag!=0) & (a_flag!=0) & (stop_flag!=0):
-            print(i, e_flag, a_flag, stop_flag, file_path)
-        else:
-            zero_files.append(i)
+        pat = re.findall(r'.+\([A-Z]+.+\)', res)[0]
+        if '+' in pat:
+            parts = pat.split('+')
+            if 'Inc' in parts[0]:
+                pat = re.findall(r'.+Inc{?}*', parts[0])[0]
+            else:
+                for p in parts:
+                    search_c = re.search(r'\(.+[A-Z]+\)', p)
+                    if search_c is not None:
+                        search_c = search_c.group()
+                    else:
+                        search_c = ""
+                    if len(search_c)!=0:
+                        pat = p
     except:
-        pass
+        if '+' in res:
+            parts = res.split('+')
+            if 'Inc' in parts[0]:
+                pat = re.findall(r'.+Inc{?}*', parts[0])[0]
+            else:
+                for p in parts:
+                    search_c = re.search(r'\(.+[A-Z]+\)', p)
+                    if search_c is not None:
+                        search_c = search_c.group()
+                    else:
+                        search_c = ""
+                    if len(search_c)!=0:
+                        pat = p
+    return pat
+
+def head_comp(bstext):
+    div_ahd = bstext('div', id="a-hd")[0]
+    return div_ahd('h1')[0].text
 
 
+def all_inf_date_comp(bstext, header):
+    inf_list = []
+    # comp_above, comp_head
+    # date_above, date_mod, date_pub, date_pub_content
+    # company part
+    try:
+        inf_list.append(comp_getter(header))
+    except:
+        inf_list.append('error')
+    inf_list.append(head_comp(bstext))
+    # date part
+    try:
+        inf_list.append(date_getter(header))
+    except:
+        inf_list.append('error')
+    inf_list = inf_list + head_date(bstext)
+    return inf_list
 
 
-file_path = err_files[zero_files[2]][:-1]
-
-text_file = open(file_path, "r")
-
-lines = text_file.read()
-text_file.close()
-text = BeautifulSoup(lines, 'html.parser')
-
-text_data = text('p')
-
-text_data
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-file_path = 'data/outer/1-526/281_num_28.txt'
+file_path = err_files[0][5:].replace('*', '/')
 
 ### func start ###
 
@@ -95,14 +106,6 @@ text_file.close()
 text = BeautifulSoup(lines, 'html.parser')
 
 text_data = text('p')
-
-for p in range(len(text_data)):
-    if 'Unidentified Company Representative' in text_data[p].text:
-        print('Unidentified Company Representative included')
-        break
-    if 'Unidentified Corporate Participant' in text_data[p].text:
-        print('Unidentified Company Representative included')
-        break
 
 e_flag = 0
 a_flag = 0
@@ -121,12 +124,14 @@ for p in range(len(text_data)):
             stop_flag = p
             break
 
-print(e_flag, a_flag, stop_flag)
-
 header = '+'.join([(lambda x: x.text)(t) for t in text_data[:e_flag]])
 
-date = date_getter(header)
-company_name = comp_getter(header)
+all_inf_date_comp(text, header)
+
+
+
+
+
 
 executives_name = []
 executives_pos = []
@@ -155,6 +160,24 @@ for p in range(QA_begin, len(text_data)):
         oper_flags.append(
             p
         )
+
+for p in range(len(text_data)):
+    if 'Unidentified Company Representative' in text_data[p].text:
+        print('Unidentified Company Representative included')
+        analysts.append('Unidentified Company Representative')
+        executives_name.append('Unidentified Company Representative')
+        break
+    if 'Unidentified Corporate Participant' in text_data[p].text:
+        print('Unidentified Company Participant included')
+        analysts.append('Unidentified Corporate Participant')
+        executives_name.append('Unidentified Corporate Participant')
+        break
+    if 'Unidentified Analyst' in text_data[p].text:
+        print('Unidentified Analyst included')
+        analysts.append('Unidentified Analyst')
+        executives_name.append('Unidentified Analyst')
+        break
+
 
 #############################################
 #############################################
