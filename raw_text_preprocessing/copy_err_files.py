@@ -1,6 +1,6 @@
 from shutil import copyfile
 
-with open('err.txt', 'r') as file:
+with open('live_stream.txt', 'r') as file:
     t = file.readlines()
 
 for i in range(len(t)):

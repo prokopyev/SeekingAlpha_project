@@ -3,6 +3,12 @@ from bs4 import BeautifulSoup
 import re
 
 
+def check_string_in_list_strings(s, l):
+    for el in l:
+        if s in el:
+            return True
+    return False
+
 # function retrieving text from given tag
 def text_get(a):
     return a.text
@@ -55,7 +61,7 @@ def head_date(bstext):
     head_time_list = [time_tags[0].get('datetime'),
                       time_tags[1].get('content'),
                       time_tags[1].text]
-    return len(head_time_list)
+    return head_time_list
 
 def comp_getter(s):
     res = s.replace('Call End', '')
@@ -129,20 +135,42 @@ def one_text_reader(file_path):
     skip_iter_flag = False
     for p in range(len(text_data)):
         if 'question-and-answer session not available' in text_data[p].text:
-            print('No QA')
+            print('--- No QA')
             with open(folder + 'err_qa_not_available.txt', 'a') as file:
                 file.write(file_path + '\n')
             skip_iter_flag = True
             break
         if 'No Q&A session for this event' in text_data[p].text:
-            print('No QA')
+            print('--- No QA')
             with open(folder + 'err_qa_not_available.txt', 'a') as file:
                 file.write(file_path + '\n')
             skip_iter_flag = True
             break
+    if len(text_data)<=7:
+        print('--- Stream live')
+        with open(folder + 'live_stream.txt', 'a') as file:
+            file.write(file_path + '\n')
+        skip_iter_flag = True
 
     if skip_iter_flag:
-        pass
+        return pd.DataFrame(columns=['Company_name',
+                                     'Company_name_head',
+                                     'Date',
+                                     'Date_modified',
+                                     'Date_published',
+                                     'Date_published_dup',
+                                     'Analyst',
+                                     'Analyst_bank',
+                                     'Question',
+                                     'Executive_Name',
+                                     'Executive_position',
+                                     'Answer',
+                                     'Analytics_order',
+                                     'Analytics_question_order',
+                                     'Exec_answer_order',
+                                     'Analysts_list',
+                                     'Executives_list',
+                                     'File_path'])
     else:
         e_flag = 0
         a_flag = 0
@@ -169,7 +197,7 @@ def one_text_reader(file_path):
         for i in range(e_flag+1, a_flag):
             ex_text = text_data[i].text
             if len(ex_text)>0:
-                executives_name.append(name_company_split(ex_text)[0]) #ex_text.split(' - ')[0])
+                executives_name.append(name_company_split(ex_text)[0])
                 executives_pos.append(name_company_split(ex_text)[1])
         exec_dict = dict(zip([e.replace(' ', '') for e in executives_name], executives_pos))
 
@@ -201,9 +229,8 @@ def one_text_reader(file_path):
             q_blocks = []
             for p in range(len(p_data)):
                 # if p_data[p].text in analysts:
-                if p_data[p].text.replace(' ', '') in list(
-                            map(lambda x: x.replace(' ', ''), analysts)
-                ):
+                if check_string_in_list_strings(p_data[p].text.replace(' ', ''),
+                                                list(map(lambda x: x.replace(' ', ''), analysts))):
                     q_blocks.append(p)
 
             analytics_order+=1
@@ -245,12 +272,12 @@ def one_text_reader(file_path):
                     answer_oredr+=1
                     one_q_sprint.append(
                         [
-                            comp_date_inf,                              # company
-                            comp_date_inf,                              # company_header
-                            comp_date_inf,                              # date
-                            comp_date_inf,                              # date mod
-                            comp_date_inf,                              # date pub
-                            comp_date_inf,                              # date pub content
+                            comp_date_inf[0],                           # company
+                            comp_date_inf[1],                           # company_header
+                            comp_date_inf[2],                           # date
+                            comp_date_inf[3],                           # date mod
+                            comp_date_inf[4],                           # date pub
+                            comp_date_inf[5],                           # date pub content
                             anal_name,                                  # analytics name
                             anal_comp,                                  # analytics company
                             ' '.join(q),                                # question
