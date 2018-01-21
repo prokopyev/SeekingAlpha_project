@@ -1,0 +1,4 @@
+data/outer/1-526/.DS_Store
+data/outer/770-1046/.DS_Store
+data/outer/1047-1241/.DS_Store
+data/outer/1242-1894/.DS_Store
