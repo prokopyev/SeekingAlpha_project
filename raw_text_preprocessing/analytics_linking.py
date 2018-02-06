@@ -7,80 +7,39 @@ res_tabs = os.listdir('data/res_tables')
 
 analutics_sa = []
 
+sares = pd.read_csv('data/res_tables/' + res_tabs[0])
+
+
 for f in res_tabs:
     sares = pd.read_csv('data/res_tables/' + f)
-    analutics_sa += list(pd.unique(sares['Analyst']))
+    analutics_sa += sum(list(map(lambda x: x.split(', '), pd.unique(sares['Analysts_list']))), [])
 
 analutics_sa = pd.unique(analutics_sa)
 
 analutics_sa = analutics_sa[~pd.isnull(analutics_sa)].copy()
 
 
-
-
-
-surnames = ['AGARWAL',
-            'DENG',
-            'MOCHORUK',
-            'SHASTRI',
-            'PERINCHERIL',
-            'CHAOVAMU',
-            'AFACAN',
-            'SHEEHAN',
-            'HOFFMANN',
-            'KABANYANE',
-            'EGEMEN',
-            'BAKREN',
-            'SLIPCHENKO',
-            'GEOGHEGAN',
-            'ANANDWALA',
-            'SCHNECKENBURGER',
-            'TOBIN',
-            'CORNELL',
-            'EATON',
-            'DATTELS',
-            'MICHEL',
-            'BREMEN',
-            'MOHSIN',
-            'DMIRDJIAN',
-            'FITZGERALD',
-            'KRUEGER',
-            'DUBOIS']
+# an = pd.read_stata('data/bran.dta')
 
 
 
 
+det = pd.read_stata('data/det.dta', chunksize=100)
 
 
-for s in surnames:
+det.__next__().columns
+
+
+
+recdet = pd.read_stata('data/recdet.dta')
+
+
+sample = recdet.iloc[[3,100,1007,4321, 70000, 5, 6, 20,  1678,62465,45114,9000,60000,43351], :].copy()
+
+
+surdict = {}
+
+for s in pd.unique(recdet['cname'])[:500]:#list(map(lambda x: x.split(' ')[0], sample['analyst'].tolist())):
 
     print(s)
 
-    for a in analutics_sa:
-        if s.lower() in a.lower():
-            print(a)
-
-
-
-
-
-
-an = pd.read_stata('data/bran.dta')
-
-an = an[an['baindi']=='A'].copy()
-
-
-first = []
-
-for i in pd.unique(an['baname']):
-    if 'AGARWAL' in i:
-        first.append(i)
-
-second = []
-
-for a in analutics_sa:
-    if 'AGARWAL'.lower() in a.lower():
-        second.append(a)
-
-pd.DataFrame(first).to_csv('f.csv')
-pd.DataFrame(second).to_csv('s.csv')
